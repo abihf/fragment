@@ -1,6 +1,6 @@
 {
   "name": "@traveloka/fragment",
-  "version": "0.1.0-alpha.1",
+  "version": "0.0.2",
   "main": "./lib/index.js",
   "module": "./esm/index.js",
   "types": "./lib/index.d.ts",
@@ -45,6 +45,7 @@
     "prettier-tslint": "^0.4.0",
     "react": "^16.5.2",
     "react-dom": "^16.5.2",
+    "react-testing-library": "^5.2.0",
     "ts-jest": "^23.10.3",
     "tslint": "^5.11.0",
     "typescript": "^3.1.1"

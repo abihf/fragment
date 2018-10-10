@@ -8,9 +8,9 @@ export const CacheConsumer = Context.Consumer;
 
 type CacheProp = { cacheManager: ICacheManager };
 
-export function withCacheManager<T extends CacheProp>(
-  Comp: ComponentType<T>,
-): ComponentType<Exclude<T, CacheProp>> {
+export function withCacheManager<T>(
+  Comp: ComponentType<T & CacheProp>,
+): ComponentType<T> {
   return (props) => (
     <CacheConsumer>
       {(cacheManager) => <Comp {...props} cacheManager={cacheManager} />}
