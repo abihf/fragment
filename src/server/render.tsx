@@ -19,7 +19,7 @@ export type TemplateData<T> = {
 
 export type ServerRenderFunction<T> = (
   element: ReactElement<any>,
-) => T | Promise<T>;
+) => T | PromiseLike<T>;
 
 export type RenderOptions<T> = {
   routes: RouteConfig;
@@ -80,15 +80,7 @@ export async function render<T = string>(
   const helmet = Helmet.renderStatic();
 
   const renderer: ServerRenderFunction<T> = opt.renderer || defaultRenderer;
-
-  const promisedContent: any = renderer(app);
-  let content: T;
-  if (promisedContent.then && promisedContent.catch) {
-    // If it looks like a duck, then it probably is a duck
-    content = await promisedContent;
-  } else {
-    content = promisedContent;
-  }
+  const content = await Promise.resolve(renderer(app));
 
   const templateData: TemplateData<T> = {
     content,
