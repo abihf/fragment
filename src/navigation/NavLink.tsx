@@ -18,7 +18,7 @@ export const NavLink: ComponentType<NavLinkProps> = withRouter<
     activeClassName = "active",
     activeStyle,
 
-    match,
+    match: parentMatch,
     history,
     location,
     staticContext,
@@ -28,8 +28,8 @@ export const NavLink: ComponentType<NavLinkProps> = withRouter<
 
   if (activeClassName || activeStyle) {
     const match = matchPath(history.location.pathname, {
-      path: to,
       exact,
+      path: to,
     });
 
     if (match && activeClassName) {
