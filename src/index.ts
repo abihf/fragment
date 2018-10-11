@@ -23,6 +23,7 @@ export {
 export { Link } from "./navigation/Link";
 export { NavLink } from "./navigation/NavLink";
 export { navigate, preloadPage } from "./navigation/routing";
+export { Switch, Route } from "react-router-dom";
 
 // function for declaring isomorphic parts
 export { isomorphic } from "./isomorphic/isomorphic";
