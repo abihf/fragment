@@ -36,7 +36,8 @@ module.exports = function(source) {
       const args = node.arguments.map((argNode) =>
         source.substring(argNode.start, argNode.end),
       );
-      chunks.push(`{id: ${args[0]}, module: ${args[1]}}`);
+      const moduleRequire = args[1].replace(/import\s*\(/, "require(");
+      chunks.push(`{id: ${args[0]}, module: ${moduleRequire}}`);
     },
   });
 

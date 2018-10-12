@@ -3,7 +3,7 @@ import { LoadingComponentProps } from "react-loadable";
 import { RouteProps } from "react-router";
 import { Module } from "./utils/module";
 
-type ModuleLoader<T> = () => Promise<Module<T>>;
+// type ModuleLoader<T> = () => Promise<Module<T>>;
 
 export type FragmentConfig = FragmentConfigItem[];
 
@@ -20,13 +20,22 @@ export type RouteConfigItem = RouteProps & {
 };
 
 export type FragmentPage = {
-  fragments: ModuleLoader<FragmentConfig>;
-  loader: ModuleLoader<ComponentType>;
+  // fragments: ModuleLoader<FragmentConfig>;
+  // loader: ModuleLoader<ComponentType>;
+  pageModule: string;
+  fragmentModule: string;
+  component: Module<ComponentType>;
+  chunkName: string;
+};
+
+export type PageChunksMap = {
+  [name: string]: string;
 };
 
 export type FragmentData = {
   hydrateProps: HydrateProps;
   cache: any;
+  chunks: PageChunksMap;
 };
 
 export type HydrateProps = {

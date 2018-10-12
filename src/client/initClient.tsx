@@ -41,6 +41,7 @@ export async function initClient({
 
   const fullyRendered = configureClientNavigation({
     cacheManager,
+    chunks: data.chunks,
     history,
     renderer: rootRenderer,
     rootElement,

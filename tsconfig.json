@@ -1,4 +1,5 @@
 {
+  "$schema": "https://schemastore.azurewebsites.net/schemas/json/tsconfig.json",
   "include": ["src/**/*"],
   "exclude": ["node_modules", "**/*.test.ts", "**/*.test.tsx"],
   "compilerOptions": {
@@ -11,6 +12,7 @@
       "scripthost",
       "dom"
     ] /* Specify library files to be included in the compilation. */,
+    "typeRoots": ["./types/"],
     // "allowJs": true,                       /* Allow javascript files to be compiled. */
     // "checkJs": true,                       /* Report errors in .js files. */
     "jsx": "react" /* Specify JSX code generation: 'preserve', 'react-native', or 'react'. */,

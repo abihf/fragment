@@ -6,11 +6,11 @@ import { Route, Router, Switch } from "react-router-dom";
 
 import { ICacheManager } from "../fetch/CacheManager";
 import { CacheProvider } from "../fetch/CacheProvider";
-import { ComponentWrapper, RouteConfig } from "../types";
-import { extractModuleDefault, Module } from "../utils/module";
+import { ComponentWrapper, PageChunksMap, RouteConfig } from "../types";
 import { onIdle } from "../utils/onIdle";
 import { findRoute } from "../utils/routes";
-import { navigate, preloadPage } from "./routing";
+import {} from "./global";
+import { loadPageChunk, navigate, preloadPage } from "./routing";
 
 export type ClientNavigationOption = {
   rootElement: Element;
@@ -19,33 +19,30 @@ export type ClientNavigationOption = {
   history: History;
   wrapper: ComponentWrapper;
   renderer?: Renderer;
+  chunks: PageChunksMap;
 };
-
-declare global {
-  // tslint:disable-next-line:interface-name
-  interface Window {
-    _history: History;
-    _routes: RouteConfig;
-  }
-}
 
 export function configureClientNavigation(
   option: Readonly<ClientNavigationOption>,
 ): boolean {
   let initialized = false;
-  const currentPath = option.history.location.pathname;
+  const { history, routes, chunks, rootElement } = option;
+  const currentPath = history.location.pathname;
 
-  window._history = option.history;
-  window._routes = option.routes;
+  window.fragmentNavigation = {
+    chunks,
+    history,
+    routes,
+  };
 
-  option.history.listen((location) => {
+  history.listen((location) => {
     const prevUrl = currentPath;
     if (!initialized) {
       initialized = initRootComponent(option, prevUrl, location.pathname);
     }
   });
 
-  option.rootElement.querySelectorAll("[data-fragment-link]").forEach((el) => {
+  rootElement.querySelectorAll("[data-fragment-link]").forEach((el) => {
     const target = el.getAttribute("href");
     if (!target) {
       return;
@@ -65,7 +62,6 @@ export function configureClientNavigation(
 
   return false;
 }
-
 function initRootComponent(
   opt: Readonly<ClientNavigationOption>,
   prevUrl: string,
@@ -82,8 +78,10 @@ function initRootComponent(
     return false;
   }
 
-  nextRoute.page.loader().then(() => {
-    const RouteComponent = wrapper(generateRouteComponent(routes, history));
+  loadPageChunk(nextRoute.page, opt.chunks).then(() => {
+    const RouteComponent = wrapper(
+      generateRouteComponent(routes, history, opt.chunks),
+    );
 
     rootElement.querySelectorAll("[data-fragment-root]").forEach((el) => {
       ReactDOM.unmountComponentAtNode(el);
@@ -97,7 +95,9 @@ function initRootComponent(
       () => {
         // prefetch previous page for back operation
         if (prevRoute) {
-          onIdle(() => prevRoute.page.loader().catch(() => undefined));
+          onIdle(() => {
+            loadPageChunk(prevRoute.page, opt.chunks).catch(() => "ignore");
+          });
         }
       },
     );
@@ -111,13 +111,14 @@ const DefaultLoading: React.SFC<Loadable.LoadingComponentProps> = () => null;
 function generateRouteComponent(
   routes: RouteConfig,
   history: History,
+  chunks: PageChunksMap,
 ): ComponentType {
   return () => (
     <Router history={history}>
       <Switch>
         {routes.map(({ page, loading, ...route }) => {
           const Comp = Loadable({
-            loader: resolveModuleDefault(page.loader),
+            loader: () => loadPageChunk(page, chunks),
             loading: loading || DefaultLoading,
           });
 
@@ -130,10 +131,4 @@ function generateRouteComponent(
       </Switch>
     </Router>
   );
-}
-
-function resolveModuleDefault<T>(
-  loader: () => Promise<Module<T>>,
-): () => Promise<T> {
-  return () => loader().then((mod) => extractModuleDefault(mod));
 }

@@ -7,12 +7,18 @@ import { matchPath, StaticRouter } from "react-router-dom";
 import { CacheProvider } from "../fetch/CacheProvider";
 import { ServerCacheManager } from "../fetch/ServerCacheManager";
 import { IsomorphicProvider } from "../isomorphic/isomorphic";
-import { FragmentData, HydrateProps, RouteConfig } from "../types";
+import {
+  FragmentData,
+  HydrateProps,
+  PageChunksMap,
+  RouteConfig,
+} from "../types";
 import { extractModuleDefault } from "../utils/module";
 import { walkTree } from "../utils/walkTree";
 
 export type TemplateData<T> = {
   content: T;
+  scripts: string[];
   data: FragmentData;
   helmet: HelmetData;
 };
@@ -21,9 +27,17 @@ export type ServerRenderFunction<T> = (
   element: ReactElement<any>,
 ) => T | PromiseLike<T>;
 
+export type RazzleAsset = {
+  [name: string]: {
+    js?: string;
+    css?: string;
+  };
+};
+
 export type RenderOptions<T> = {
   routes: RouteConfig;
   url: string;
+  assets: RazzleAsset;
   componentWrapper?: (component: ComponentType) => ComponentType;
   renderer?: ServerRenderFunction<T>;
   template: (d: TemplateData<T>) => string;
@@ -53,7 +67,7 @@ export async function render<T = string>(
 
   const { page, ...routeProps } = currentRoute;
 
-  const component = extractModuleDefault(await page.loader());
+  const component = extractModuleDefault(page.component);
   const componentWrapper = opt.componentWrapper || defaultComponentWrapper;
   const EnhancedComponent = componentWrapper(component);
 
@@ -81,13 +95,32 @@ export async function render<T = string>(
 
   const renderer: ServerRenderFunction<T> = opt.renderer || defaultRenderer;
   const content = await Promise.resolve(renderer(app));
+  const { assets } = opt;
+  const scripts = [
+    "runtime",
+    "vendors",
+    "commons",
+    "fragment-" + currentRoute.page.chunkName,
+    "client",
+  ]
+    .filter((name) => assets[name] && assets[name].js)
+    .map((name) => assets[name].js as string);
+
+  const chunks = opt.routes
+    .map((route) => route.page.chunkName)
+    .reduce<PageChunksMap>((result, name) => {
+      result[name] = assets["page-" + name].js as string;
+      return result;
+    }, {});
 
   const templateData: TemplateData<T> = {
     content,
     helmet,
+    scripts,
 
     data: {
       cache: cacheManager.generateInitialCache(),
+      chunks,
       hydrateProps,
     },
   };

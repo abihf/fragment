@@ -5,7 +5,12 @@ import { Route, Router } from "react-router-dom";
 
 import { CacheManager } from "../fetch/CacheManager";
 import { CacheProvider } from "../fetch/CacheProvider";
-import { ComponentWrapper, FragmentData, RouteConfig } from "../types";
+import {
+  ComponentWrapper,
+  FragmentConfig,
+  FragmentData,
+  RouteConfig,
+} from "../types";
 import { extractModuleDefault } from "../utils/module";
 import { findRoute } from "../utils/routes";
 
@@ -18,6 +23,8 @@ export type PartialHydrateOption = {
   renderer?: Renderer;
 };
 
+declare function __webpack_require__<T>(name: string | number): T;
+
 export async function partialHydrate(opt: PartialHydrateOption): Promise<void> {
   const currentRoute = findRoute(opt.routes, location.pathname);
   if (!currentRoute) {
@@ -25,7 +32,7 @@ export async function partialHydrate(opt: PartialHydrateOption): Promise<void> {
   }
 
   const fragmentConfig = extractModuleDefault(
-    await currentRoute.page.fragments(),
+    __webpack_require__<FragmentConfig>(currentRoute.page.fragmentModule),
   );
   const renderer = opt.renderer || ReactDOM.hydrate;
 
