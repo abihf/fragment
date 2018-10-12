@@ -6,11 +6,9 @@ module.exports = (source) => {
     )
     .replace(
       /loadFragmentPage\s*\(\s*import\s*\(.*?['"]([^'"]+)['"]\s*\)\s*,?\s*\)/gm,
-      (region) => {
-        const re = /loadFragmentPage\s*\(\s*import\s*\(.*?['"]([^'"]+)['"]\s*\)\s*,?\s*\)/m;
-        const m = re.exec(region);
-        if (!m) return region;
-        return `{component:require("${m[1]}"),chunkName:"${m[1]
+      (match, file) => {
+        if (!file) return match;
+        return `{component:require("${file}"),chunkName:"${file
           .replace(/.*\/([^\/]+)\.page$/, "$1")
           .replace(/([a-z])([A-Z])/g, "$1-$2")
           .toLowerCase()}"}`;

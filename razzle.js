@@ -11,19 +11,23 @@ module.exports = function withFragment(base) {
         test: /\.(ts|tsx|js|jsx)$/,
         loaders:
           target === "node" ? "fragment-route-server" : "fragment-route-client",
-        include: [path.resolve("./src/routes/")],
+        include: [path.resolve("./src/")],
       });
 
       if (target === "web") {
-        const srcPath = path.resolve("./src");
         const pageFiles = glob.sync("./src/**/*.page.*");
+        const origClientEntry = config.entry.client;
+        delete config.entry.client;
         pageFiles.forEach((pageFile) => {
           const chunkName = pageFile
             .replace(/.*\/([^\/]+)\.page\.(js|jsx|ts|tsx)$/, "$1")
             .replace(/([a-z])([A-Z])/g, "$1-$2")
             .toLowerCase();
-          config.entry["page-" + chunkName] = pageFile;
-          config.entry["fragment-" + chunkName] = "fragment-page!" + pageFile;
+          config.entry["page-" + chunkName] = [pageFile];
+          config.entry["fragment-" + chunkName] = [
+            ...origClientEntry,
+            "fragment-page!" + pageFile,
+          ];
         });
         config.output.filename = config.output.chunkFilename = `static/js/[name]${
           dev ? "" : "-[contenthash]"
@@ -50,6 +54,11 @@ module.exports = function withFragment(base) {
             },
           },
         };
+      }
+
+      if (target === "node") {
+        // __webpack_require__ is buggy in nodejs when handling react context
+        config.resolve.mainFields = ["main"];
       }
 
       if (base && base.modify) {

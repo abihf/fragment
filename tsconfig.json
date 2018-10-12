@@ -1,7 +1,8 @@
 {
   "$schema": "https://schemastore.azurewebsites.net/schemas/json/tsconfig.json",
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "**/*.test.ts", "**/*.test.tsx"],
+  "files": ["./src/index.ts"],
+  // "include": ["src/**/*"],
+  // "exclude": ["node_modules", "**/*.test.ts", "**/*.test.tsx"],
   "compilerOptions": {
     /* Basic Options */
     "target": "es6" /* Specify ECMAScript target version: 'ES3' (default), 'ES5', 'ES2015', 'ES2016', 'ES2017','ES2018' or 'ESNEXT'. */,
