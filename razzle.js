@@ -34,11 +34,11 @@ module.exports = function withFragment(base) {
             name: "runtime",
           },
           splitChunks: {
-            chunks: "all",
+            // chunks: "all",
             cacheGroups: {
               commons: {
                 name: "commons",
-                chunks: "initial",
+                chunks: "all",
                 minChunks: pageFiles.length,
                 // test: /\/node_modules\//,
               },

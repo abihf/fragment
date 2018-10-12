@@ -8,6 +8,7 @@
   "license": "MIT",
   "scripts": {
     "build": "tsc",
+    "watch": "rm -r ./esm && tsc --watch",
     "build:esm": "tsc --module es2015 --target es5 --outDir esm -d false",
     "lint": "tslint --project tsconfig.json",
     "test": "jest"
