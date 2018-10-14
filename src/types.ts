@@ -19,9 +19,11 @@ export type RouteConfigItem = RouteProps & {
   page: FragmentPage;
 };
 
-export type FragmentPage = {
+type FragmentPage = {
+  name: string;
   fragments: ModuleLoader<FragmentConfig>;
   loader: ModuleLoader<ComponentType>;
+  fragmentModule: string;
 };
 
 export type FragmentData = {
@@ -37,5 +39,6 @@ export type ComponentWrapper = (component: ComponentType) => ComponentType;
 
 // this function will be replaced by fragment-normalizer loader
 export declare function loadFragmentPage(
+  name: string,
   importer: Promise<Module<ComponentType>>,
 ): FragmentPage;

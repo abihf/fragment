@@ -1,3 +1,6 @@
+import FS from "fs";
+import Path from "path";
+
 import React, { ComponentType, ReactElement } from "react";
 import ReactDOMServer from "react-dom/server";
 import Helmet, { HelmetData } from "react-helmet";
@@ -11,17 +14,31 @@ import { FragmentData, HydrateProps, RouteConfig } from "../types";
 import { extractModuleDefault } from "../utils/module";
 import { walkTree } from "../utils/walkTree";
 
+const fragmentManifestFile = Path.resolve("./build/fragments.map.json");
+const fragmentManifest: { [id: string]: string[] } = JSON.parse(
+  FS.readFileSync(fragmentManifestFile, "utf-8"),
+);
+
 export type TemplateData<T> = {
   content: T;
   data: FragmentData;
   helmet: HelmetData;
+  scripts: string[];
 };
 
 export type ServerRenderFunction<T> = (
   element: ReactElement<any>,
 ) => T | PromiseLike<T>;
 
+export type RazzleAsset = {
+  [name: string]: {
+    js?: string;
+    css?: string;
+  };
+};
+
 export type RenderOptions<T> = {
+  assets: RazzleAsset;
   routes: RouteConfig;
   url: string;
   componentWrapper?: (component: ComponentType) => ComponentType;
@@ -82,9 +99,18 @@ export async function render<T = string>(
   const renderer: ServerRenderFunction<T> = opt.renderer || defaultRenderer;
   const content = await Promise.resolve(renderer(app));
 
+  const scripts = ["runtime", "vendors", "commons", "client"]
+    .map((name) => opt.assets[name] && (opt.assets[name].js as string))
+    .filter(Boolean);
+  const fragmentScripts = fragmentManifest[currentRoute.page.fragmentModule];
+  if (fragmentScripts) {
+    scripts.splice(scripts.length - 1, 0, ...fragmentScripts);
+  }
+
   const templateData: TemplateData<T> = {
     content,
     helmet,
+    scripts,
 
     data: {
       cache: cacheManager.generateInitialCache(),
