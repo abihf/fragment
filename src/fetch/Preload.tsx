@@ -1,4 +1,4 @@
-import { ReactElement } from "react";
+import { ReactElement, ReactNode } from "react";
 import { withIsomirphicMarker } from "../isomorphic/IsomorphicMarker";
 import { withCacheManager } from "./CacheProvider";
 import { FetchOptions, IFetcher } from "./Fetcher";
@@ -14,10 +14,15 @@ type PreloadRequest<T> = PreloadRequestObject<T> | PreloadRequestArray<T>;
 
 type PreloadProps = {
   fetch: Array<PreloadRequest<any>>;
+  children?: ReactNode | (() => ReactNode);
 };
 
 function isObject<T>(x: PreloadRequest<T>): x is PreloadRequestObject<T> {
   return typeof (x as PreloadRequestObject<T>).fetcher !== "undefined";
+}
+
+function isFunction<T>(x: T | (() => T)): x is (() => T) {
+  return typeof x === "function";
 }
 
 export const Preload = withIsomirphicMarker<PreloadProps>(
@@ -33,6 +38,10 @@ export const Preload = withIsomirphicMarker<PreloadProps>(
       }
     });
 
-    return (children as ReactElement<any>) || null;
+    if (isFunction(children)) {
+      return children() as ReactElement<any>;
+    } else {
+      return (children as ReactElement<any>) || null;
+    }
   }),
 );

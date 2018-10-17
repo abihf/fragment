@@ -54,4 +54,21 @@ describe("Preload Component", () => {
     const { container } = render(app);
     expect(container.innerHTML).toBe("Success");
   });
+
+  it("should also support render props", () => {
+    const fetcher: IFetcher<string, string> = {
+      fetch() {
+        return { loading: false, data: "Hello" };
+      },
+    };
+
+    const app = (
+      <Preload fetch={[{ fetcher, args: "Fragment" }]}>
+        {() => "Success"}
+      </Preload>
+    );
+
+    const { container } = render(app);
+    expect(container.innerHTML).toBe("Success");
+  });
 });
