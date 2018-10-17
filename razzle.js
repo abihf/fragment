@@ -4,43 +4,23 @@ const ManifestPlugin = require("webpack-manifest-plugin");
 
 const razzlePaths = require("razzle/config/paths");
 
-function createAssetGenerator(basePath) {
-  return (seed, files) =>
-    files.reduce((manifest, { isInitial, chunk, name, path }) => {
-      if (
-        !isInitial &&
-        path.endsWith(".js") &&
-        chunk.chunkReason === undefined
-      ) {
-        chunk.forEachModule((mod) => {
-          let currentModule = mod;
-          if (mod.constructor.name === "ConcatenatedModule") {
-            currentModule = mod.rootModule;
-          }
+/** @typedef {import("webpack-manifest-plugin").Options["reduce"]} ManifestReducer */
+/** @typedef {import("webpack").Module} Module */
+/** @typedef {import("webpack").Configuration} WebpackConfig */
+/** @typedef {typeof import("webpack")} Webpack */
+/**
+ * @typedef {Object} RazzleEnv
+ * @property {"web" | "node"} target
+ * @property {boolean} dev
+ */
+/**
+ * @typedef {Object} RazzleConfig
+ * @property {(config: WebpackConfig, env: RazzleEnv, webpack: Webpack) => WebpackConfig} modify
+ */
 
-          if (currentModule.rawRequest.startsWith("fragment-loader!")) {
-            manifest[
-              currentModule.rawRequest.replace(/^.*!/, "")
-            ] = findChunkDependencies(chunk).map((f) => basePath + f);
-          }
-        });
-      }
-      return manifest;
-    }, seed);
-}
-
-function findChunkDependencies(chunk) {
-  const files = new Set();
-  chunk.files.forEach((f) => files.add(f));
-  // files.add(chunk.name || chunk.id);
-  chunk._groups.forEach((group) =>
-    group.chunks.forEach((c) => c.files.forEach((f) => files.add(f))),
-  );
-  return Array.from(files).filter((f) => f.endsWith(".js"));
-}
-
-module.exports = function withFragment(base) {
-  return Object.assign({}, base, {
+module.exports = function withFragment(/** @type {RazzleConfig} */ base) {
+  /** @type {RazzleConfig} */
+  const razzleConfig = {
     modify(config, env, webpack) {
       config.resolveLoader.modules.push(path.join(__dirname, "./loaders"));
       config.module.rules.push({
@@ -66,12 +46,17 @@ module.exports = function withFragment(base) {
               razzlePaths.appBuild,
               "./fragments.map.json",
             ),
-            generate: createAssetGenerator(config.output.publicPath),
+            reduce: createAssetReducer(config.output.publicPath),
             writeToFileEmit: true,
           }),
         );
 
         config.optimization.runtimeChunk = "single";
+        config.optimization.splitChunks = {
+          cacheGroups: {
+            vendors: false,
+          },
+        };
 
         if (!env.dev) {
           config.optimization.minimizer = [
@@ -127,10 +112,51 @@ module.exports = function withFragment(base) {
         config.resolve.mainFields = ["main"];
       }
 
-      if (base) {
+      if (base && base.modify) {
         return base.modify(config, env, webpack);
       }
       return config;
     },
-  });
+  };
+
+  return Object.assign({}, base, razzleConfig);
 };
+
+/**
+ * @param {string} basePath
+ * @returns {ManifestReducer}
+ */
+function createAssetReducer(basePath) {
+  return (manifest, { isInitial, chunk, path }) => {
+    if (!isInitial && path.endsWith(".js") && chunk.chunkReason === undefined) {
+      chunk.forEachModule((mod) => {
+        /** @type {Module} */
+        let currentModule = mod;
+        if (mod.constructor.name === "ConcatenatedModule") {
+          currentModule = mod.rootModule;
+        }
+
+        if (currentModule.rawRequest.startsWith("fragment-loader!")) {
+          const modRequest = currentModule.rawRequest.replace(/^.*!/, "");
+          if (!manifest[modRequest]) {
+            manifest[modRequest] = [];
+          }
+          manifest[modRequest].push(
+            ...findChunkDependencies(chunk).map((f) => basePath + f),
+          );
+        }
+      });
+    }
+    return manifest;
+  };
+}
+
+function findChunkDependencies(chunk) {
+  const files = new Set();
+  chunk.files.forEach((f) => files.add(f));
+  // files.add(chunk.name || chunk.id);
+  chunk._groups.forEach((group) =>
+    group.chunks.forEach((c) => c.files.forEach((f) => files.add(f))),
+  );
+  return Array.from(files).filter((f) => f.endsWith(".js"));
+}
