@@ -38,18 +38,16 @@ module.exports = function withFragment(base) {
             name: "runtime",
           },
           splitChunks: {
-            // chunks: "all",
             cacheGroups: {
               commons: {
                 name: "commons",
                 chunks: "all",
                 minChunks: pageFiles.length,
-                // test: /\/node_modules\//,
               },
-              react: {
+              commonVendor: {
                 name: "commons",
                 chunks: "all",
-                test: /[\\/]node_modules[\\/](react|react-dom|@abihf\/fragment)[\\/]/,
+                test: /[\\/]node_modules[\\/](react|react-dom|@traveloka\/fragment)[\\/]/,
               },
             },
           },
