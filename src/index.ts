@@ -1,5 +1,6 @@
 // Fetch Component
 export { Fetch, FetchProps } from "./fetch/Fetch";
+export { MultiFetch, MultiFetchProps } from "./fetch/MultiFetch";
 
 // types for creating Fetcher
 export {

@@ -9,13 +9,13 @@ type FetchRequestItem<T> = {
   args: any;
 };
 
-export type FetchRequest<Values extends { [key: string]: any }> = {
+type FetchRequest<Values extends { [key: string]: any }> = {
   [i in keyof Values]: FetchRequestItem<Values[i]>
 };
 
 type MultiFetchResult<Values> = { [i in keyof Values]: FetchResult<Values[i]> };
 
-type MultiFetchProps<Values> = {
+export type MultiFetchProps<Values> = {
   fetch: FetchRequest<Values>;
   noThrows?: boolean;
   fallback?: ReactNode;
