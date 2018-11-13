@@ -1,10 +1,15 @@
-import { ICacheManager } from "./CacheManager";
-
 export type FetchFunction<K, V> = (arg: K) => Promise<V>;
 
-export type FetchResult<V> = {
-  loading: boolean;
-  promise?: Promise<V>;
+export type PendingFetchResult<V> = {
+  loading: true;
+  promise: Promise<V>;
+};
+
+export type ResolvedFetchResult = {
+  loading: false;
+};
+
+export type FetchResult<V> = (PendingFetchResult<V> | ResolvedFetchResult) & {
   data?: V;
   error?: any;
 };
@@ -17,5 +22,7 @@ export type FetchOptions = {
 };
 
 export interface IFetcher<K, V> {
-  fetch: (cache: ICacheManager, key: K, opt?: FetchOptions) => FetchResult<V>;
+  name: string;
+  fetch(key: K): Promise<V>;
+  hashKey(key: K): string;
 }

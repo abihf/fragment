@@ -1,7 +1,6 @@
-import { ReactElement, ReactNode } from "react";
-import { withIsomirphicMarker } from "../isomorphic/IsomorphicMarker";
-import { withCacheManager } from "./CacheProvider";
-import { FetchOptions, IFetcher } from "./Fetcher";
+import { ReactElement, ReactNode, useContext } from "react";
+import { CacheContext } from "./CacheProvider";
+import { IFetcher } from "./Fetcher";
 
 type PreloadRequestObject<T> = {
   fetcher: IFetcher<any, T>;
@@ -25,23 +24,28 @@ function isFunction<T>(x: T | (() => T)): x is (() => T) {
   return typeof x === "function";
 }
 
-export const Preload = withIsomirphicMarker<PreloadProps>(
-  withCacheManager(({ fetch, cacheManager, insideIsomorphic, children }) => {
-    const opt: FetchOptions = {
-      dump: insideIsomorphic,
-    };
-    fetch.forEach((item) => {
-      if (isObject(item)) {
-        item.fetcher.fetch(cacheManager, item.args, opt);
-      } else {
-        item[0].fetch(cacheManager, item["1"], opt);
-      }
-    });
-
-    if (isFunction(children)) {
-      return children() as ReactElement<any>;
+export function usePreloader(fetch: ReadonlyArray<PreloadRequest<any>>): void {
+  const cache = useContext(CacheContext);
+  fetch.forEach((item) => {
+    let fetcher: IFetcher<any, any>;
+    let args: any;
+    if (isObject(item)) {
+      fetcher = item.fetcher;
+      args = item.args;
     } else {
-      return (children as ReactElement<any>) || null;
+      fetcher = item[0];
+      args = item[1];
     }
-  }),
-);
+    cache.enqueue(fetcher.name, fetcher.hashKey(args), args, fetcher.fetch);
+  });
+}
+
+export function Preload({ fetch, children }: PreloadProps) {
+  usePreloader(fetch);
+
+  if (isFunction(children)) {
+    return children() as ReactElement<any>;
+  } else {
+    return (children as ReactElement<any>) || null;
+  }
+}

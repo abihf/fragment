@@ -43,16 +43,15 @@
     "jest": "^23.6.0",
     "prettier": "^1.14.3",
     "prettier-tslint": "^0.4.0",
-    "react": "^16.5.2",
-    "react-dom": "^16.5.2",
+    "react": "^16.7.0-alpha.0",
+    "react-dom": "^16.7.0-alpha.0",
     "react-testing-library": "^5.2.0",
     "ts-jest": "^23.10.3",
     "tslint": "^5.11.0",
+    "tslint-config-prettier": "^1.15.0",
     "typescript": "^3.1.1"
   },
   "peerDependencies": {
-    "acorn-loose": "^6.0.0",
-    "acorn-walk": "^6.1.0",
     "react": "^16.5.2",
     "react-dom": "^16.5.2"
   }

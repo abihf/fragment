@@ -3,6 +3,7 @@ import { defaultCacheManager, ICacheManager } from "./CacheManager";
 
 const Context = createContext<ICacheManager>(defaultCacheManager);
 
+export const CacheContext = Context;
 export const CacheProvider = Context.Provider;
 export const CacheConsumer = Context.Consumer;
 

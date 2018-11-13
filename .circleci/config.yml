@@ -12,22 +12,28 @@ jobs:
       # Download and cache dependencies
       - restore_cache:
           keys:
-            - v1-dependencies-{{ checksum "package-lock.json" }}
+            - v1-dependencies-{{ checksum "yarn.lock" }}
             - v1-dependencies-
 
-      - run: npm ci
+      - run:
+          name: Install
+          command: yarn install --prefer-offline --pure-lockfile
+
+      - run:
+          name: Audit Dependency
+          command: yarn audit
 
       - save_cache:
           paths:
             - node_modules
-          key: v1-dependencies-{{ checksum "package-lock.json" }}
+          key: v1-dependencies-{{ checksum "yarn.lock" }}
 
       # run linter
       - run:
           name: Lint
-          command: npm run lint
+          command: yarn lint
 
       # run tests
       - run:
           name: Test
-          command: npm run test
+          command: yarn test

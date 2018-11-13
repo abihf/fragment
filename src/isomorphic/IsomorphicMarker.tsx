@@ -6,7 +6,8 @@ export const BeginIsomorphic: React.SFC = ({ children }) => (
   <Context.Provider value={true}>{children}</Context.Provider>
 );
 
-export const IsomorphicMarker = Context.Provider;
+export const IsomorphicMarkerContext = Context;
+export const IsomorphicMarkerProvider = Context.Provider;
 export const InsideIsomorphic = Context.Consumer;
 
 type withIsomprohicMarkerProps = {

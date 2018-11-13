@@ -16,7 +16,6 @@ export function createBatchFetcher<K, V>({
   hasher,
 }: BatchFetcherOption<K, V>): IFetcher<K, V> {
   // promises
-
   const promises = new Map<K, PendingPromise<V>>();
   let queue = new Set<K>();
   let scheduled = false;

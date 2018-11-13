@@ -1,9 +1,10 @@
-import React, { ReactNode } from "react";
+import React, { ReactNode, useContext, useEffect, useMemo, useState } from "react";
 
-import { InsideIsomorphic } from "../isomorphic/IsomorphicMarker";
+import { IsomorphicMarkerContext } from "../isomorphic/IsomorphicMarker";
 import { ICacheManager } from "./CacheManager";
-import { CacheConsumer } from "./CacheProvider";
+import { CacheContext } from "./CacheProvider";
 import { FetchResult, IFetcher } from "./Fetcher";
+import { IServerCacheManager } from "./ServerCacheManager";
 
 export type FetchProps<K, V> = {
   fetcher: IFetcher<K, V>;
@@ -13,68 +14,127 @@ export type FetchProps<K, V> = {
   children: (value: FetchResult<V>) => React.ReactNode;
 };
 
-type FetchBaseProps<K, V> = FetchProps<K, V> & {
-  cache: ICacheManager;
-  dump: boolean;
-};
+export function Fetch<K, V>({ fetcher, args, fallback, noThrows, children }: FetchProps<K, V>) {
+  const result = useFetcher(fetcher, args);
 
-type FetchBaseState = {
-  loading: boolean;
-};
-
-class FetchBase<K, V> extends React.Component<
-  FetchBaseProps<K, V>,
-  FetchBaseState
-> {
-  public state = {
-    loading: false,
-  };
-
-  private lastLoadStatus = false;
-
-  public componentDidMount() {
-    if (this.lastLoadStatus) {
-      this.setState({ loading: true });
-
-      // is it possible that the promise is resolved
-      // between render and mount time?
-      const { promise } = this.fetch();
-      if (promise) {
-        promise
-          .catch(() => undefined)
-          .then(() => this.setState({ loading: false }));
-      }
-    }
+  if (!result.loading && result.error && !noThrows) {
+    throw result.error;
   }
 
-  public render() {
-    const { noThrows, fallback } = this.props;
-    const result = this.fetch();
-    this.lastLoadStatus = result.loading;
-
-    if (result.error && !noThrows) {
-      throw result.error;
-    }
-
-    if (fallback && result.loading) {
-      return fallback;
-    }
-
-    return this.props.children(result);
+  if (fallback && result.loading) {
+    return fallback;
   }
 
-  public fetch() {
-    const { cache, fetcher, args, dump } = this.props;
-    return fetcher.fetch(cache, args, { dump });
-  }
+  return children(result);
 }
 
-export const Fetch = <K, V>(props: FetchProps<K, V>) => (
-  <InsideIsomorphic>
-    {(dump) => (
-      <CacheConsumer>
-        {(cache) => <FetchBase cache={cache} dump={dump} {...props} />}
-      </CacheConsumer>
-    )}
-  </InsideIsomorphic>
-);
+function isServerCache(cache: ICacheManager): cache is IServerCacheManager {
+  return typeof (cache as IServerCacheManager).markAsExported === "function";
+}
+
+export function useFetcher<K, V>(fetcher: IFetcher<K, V>, args: K): FetchResult<V> {
+  const cache = useContext(CacheContext);
+  const insideIsomorphic = useContext(IsomorphicMarkerContext);
+
+  const cacheKey = useMemo(() => fetcher.hashKey(args), [args]);
+  const [loading, setLoading] = useState(false);
+
+  const result = useMemo<FetchResult<V>>(
+    () => {
+      const cached = cache.get<V>(fetcher.name, cacheKey);
+      if (cached) {
+        if (insideIsomorphic && isServerCache(cache)) {
+          cache.markAsExported(fetcher.name, cacheKey);
+        }
+        return { loading: false, data: cached.value, error: cached.error };
+      }
+      return {
+        loading: true,
+        promise: cache.enqueue(fetcher.name, cacheKey, args, fetcher.fetch),
+      };
+    },
+    [loading, fetcher, cacheKey],
+  );
+
+  useEffect(
+    () => {
+      if (result.loading) {
+        setLoading(true);
+        let shouldSetLoading = true;
+        result.promise.then(() => {
+          if (shouldSetLoading) {
+            setLoading(false);
+          }
+        });
+        return () => {
+          shouldSetLoading = false;
+        };
+      }
+      return undefined;
+    },
+    [result.loading && result.promise],
+  );
+
+  return result;
+}
+
+export type FetchListRequest<Values extends Array<unknown>> = {
+  [i in keyof Values]: {
+    fetcher: IFetcher<any, Values[i]>;
+    args: any;
+  }
+};
+
+export type FetchListResult<Values extends Array<unknown>> = {
+  [i in keyof Values]: FetchResult<Values[i]>
+};
+
+export function useAllFetchers<Values extends Array<unknown>>(
+  req: FetchListRequest<Values>,
+): FetchListResult<Values> {
+  const cache = useContext(CacheContext);
+  const insideIsomorphic = useContext(IsomorphicMarkerContext);
+
+  const cacheKeys = useMemo(() => req.map(({ fetcher, args }) => fetcher.hashKey(args)), [req]);
+  const [loading, setLoading] = useState(false);
+
+  const result = useMemo<FetchListResult<Values>>(
+    () =>
+      cacheKeys.map((cacheKey, i) => {
+        const { fetcher, args } = req[i];
+        const cached = cache.get(fetcher.name, cacheKey);
+        if (cached) {
+          if (insideIsomorphic && isServerCache(cache)) {
+            cache.markAsExported(fetcher.name, cacheKey);
+          }
+          return { loading: false, data: cached.value, error: cached.error };
+        }
+        return {
+          loading: true,
+          promise: cache.enqueue(fetcher.name, cacheKey, args, fetcher.fetch),
+        };
+      }) as any,
+    [loading, ...cacheKeys],
+  );
+
+  useEffect(() => {
+    if (result.some((res) => res.loading)) {
+      setLoading(true);
+      let shouldSetLoading = true;
+      const promises = result.map(
+        (res) => (res.loading ? res.promise.catch(() => undefined) : Promise.resolve()),
+      );
+      Promise.all(promises).then(() => {
+        if (shouldSetLoading) {
+          setLoading(false);
+        }
+      });
+      return () => {
+        shouldSetLoading = false;
+      };
+    }
+    return undefined;
+  }, result.map((res) => res.loading));
+
+  return result;
+}
